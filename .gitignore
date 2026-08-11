@@ -1,0 +1,6 @@
+data/raw/*
+data/processed/*
+docs/eda/*.png
+__pycache__/
+*.pyc
+.venv/

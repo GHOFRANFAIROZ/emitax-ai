@@ -1,0 +1,81 @@
+# كل الإعدادات هنا — لا شيء مثبّت في الكود (أساس المرونة/Scalability)
+data:
+  raw_glob: "data/raw/*.csv"     # ضعي ملفّات CEMS هنا
+  chunksize: null                # ضعي رقماً (مثل 500000) للملفّات الكبيرة جداً
+  processed_dir: "data/processed"
+
+columns:
+  facility: "Facility Name"
+  facility_id: "Facility ID"
+  unit: "Unit ID"
+  date: "Date"
+  hour: "Hour"
+  operating_time: "Operating Time"
+  fuel_type: "Primary Fuel Type"
+  drop_all_nan: true
+  context:
+    heat_input: "Heat Input (mmBtu)"
+    gross_load: "Gross Load (MW)"
+  gases:
+    CO2: {mass: "CO2 Mass (short tons)", rate: "CO2 Rate (short tons/mmBtu)"}
+    SO2: {mass: "SO2 Mass (lbs)",        rate: "SO2 Rate (lbs/mmBtu)"}
+    NOx: {mass: "NOx Mass (lbs)",        rate: "NOx Rate (lbs/mmBtu)"}
+
+aggregate:
+  period: "M"                    # M = شهري (فترة البيان)
+
+sanity:
+  co2_per_heat_input_center: 0.105   # مؤكَّد من داتا Limestone (CV~0.07)
+  co2_per_heat_input_tol: 0.03
+
+# --- المرحلة ٢+٣ ---
+declaration:
+  honest_noise_std: 0.01     # ضجيج إبلاغ طبيعي ±1% (البيان الصادق ≈ القياس)
+  seed: 42
+
+tamper:
+  fraction: 0.35             # نسبة السجلّات التي نُلاعبها في مجموعة التقييم
+  seed: 7
+
+check:
+  rel_tolerance: 0.05        # الفرق النسبي المسموح قبل رفع إشارة (البيان < القياس)
+
+physics:
+  rel_tolerance: 0.10        # تسامح فحص أرضية معامل الانبعاث
+  ratio_low_quantile: 0.05   # حدّ أدنى لنِسَب الغازات (تحت هذا = مشبوه)
+
+temporal:
+  mad_k: 3.5              # عتبة الانحراف: intensity < median - k*MAD = مشبوه
+  min_months: 3          # أدنى عدد أشهر لبناء خطّ أساس الوحدة
+  drift_slope_frac: 0.03 # ميل هبوط شهري يُعتبر انزياحاً زاحفاً
+
+peer:
+  low_quantile: 0.05   # كثافة تحت هذا المئين من توزيع القطاع = مشبوه
+  min_peers: 2         # أدنى عدد وحدات/مصانع لبناء مرجع القطاع
+
+fusion:
+  weights: {measurement: 45, physics: 30, peer: 25, temporal: 20}
+  high_threshold: 85     # درجة الثقة ≥ → اعتماد آلي
+  medium_threshold: 55   # [55,85) → طلب توضيح ؛ < 55 → تدقيق بشري
+
+chain:
+  schema_version: "emitax-ai/1.0"
+  onchain_dir: "data/processed"
+
+physics_ipcc:
+  co2_factor_by_fuel: {Coal: 0.1049, Lignite: 0.1077, "Natural Gas": 0.0530}
+  default_co2_factor: 0.1049
+alarm:
+  warn_multiplier: 1.3
+  crit_multiplier: 1.6
+  legal_limits: {CO2: null, SO2: null, NOx: null}
+peer_iforest:
+  contamination: 0.10
+  random_state: 42
+lstm:
+  seq_len: 24
+  stride: 6
+  latent: 32
+  hidden: 64
+  epochs: 40
+  threshold_pct: 99
