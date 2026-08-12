@@ -60,12 +60,16 @@ def reconstruction_error(model, X, device: str = "cpu") -> np.ndarray:
 
 
 def export_onnx(model, seq_len: int, n_features: int, path: str, device: str = "cpu"):
-    """batch وحده ديناميكي (seq_len ثابت)؛ dummy بـ batch=2 حتى يميّز الـ tracer الـ batch."""
+    """يصدّر النموذج إلى ONNX باستخدام المُصدّر المستقر القديم لتجنب قيود الـ dynamo."""
     import torch
     model = model.to(device).eval()
-    dummy = torch.randn(2, seq_len, n_features, device=device)
-    torch.onnx.export(model, dummy, path,
-                      input_names=["window"], output_names=["reconstruction"],
-                      dynamic_axes={"window": {0: "batch"}, "reconstruction": {0: "batch"}},
-                      opset_version=17, do_constant_folding=True)
+    dummy = torch.randn(2, seq_len, n_features, device=device)          # batch=2, seq ثابت (24)
+    torch.onnx.export(
+        model, dummy, path,
+        input_names=["window"], output_names=["reconstruction"],
+        dynamic_axes={"window": {0: "batch"}, "reconstruction": {0: "batch"}},    # batch وحده ديناميكي
+        opset_version=17,
+        do_constant_folding=True,
+        dynamo=False,                                     # ← المفتاح السحري لإجبار المُصدّر القديم
+    )
     return path
