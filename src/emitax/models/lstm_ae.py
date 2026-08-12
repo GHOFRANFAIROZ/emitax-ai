@@ -21,7 +21,7 @@ def build_model(n_features: int, seq_len: int, latent: int = 64, hidden: int = 1
             h, _ = self.enc1(x)
             _, (hn, _) = self.enc2(h)
             z = hn[-1]                              # (B, latent)
-            z = z.unsqueeze(1).repeat(1, x.size(1), 1)   # طول ديناميكي من المدخل
+            z = z.unsqueeze(1).expand(-1, x.size(1), -1)
             d, _ = self.dec1(z)
             d, _ = self.dec2(d)
             return self.out(d)                      # (B, T, F)
