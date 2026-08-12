@@ -38,7 +38,7 @@ def detect_month_anomalies(hourly: pd.DataFrame, sess, meta: dict, cfg: dict) ->
     for (fac, unit, ym), sub in d.groupby(["facility", "unit", "ym"]):
         if len(sub) < T:
             continue
-        W = make_windows(sub.assign(facility=fac, unit=unit), feats, seq_len=T, stride=T)
+        W = make_windows(sub.assign(facility=fac, unit=unit), feats, seq_len=T, stride=max(1, T // 4))
         if len(W) == 0:
             continue
         W = (W - meta["mean"]) / meta["std"]
