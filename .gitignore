@@ -13,3 +13,6 @@ __pycache__/
 *.pyc
 .pytest_cache/
 .venv/
+
+# arsiv/zip dosyalari (buyuk, repoya girmemeli)
+*.zip
