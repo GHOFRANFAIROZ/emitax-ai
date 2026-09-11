@@ -1,7 +1,7 @@
-# كل الإعدادات هنا — لا شيء مثبّت في الكود (أساس المرونة/Scalability)
+# Tüm ayarlar burada — kodda sabit hiçbir şey yok (esneklik/Scalability temeli)
 data:
-  raw_glob: "data/raw/*.csv"     # ضعي ملفّات CEMS هنا
-  chunksize: null                # ضعي رقماً (مثل 500000) للملفّات الكبيرة جداً
+  raw_glob: "data/raw/*.csv"     # CEMS dosyalarını buraya koyun
+  chunksize: null                # çok büyük dosyalar için bir sayı koyun (500000 gibi)
   processed_dir: "data/processed"
 
 columns:
@@ -22,41 +22,41 @@ columns:
     NOx: {mass: "NOx Mass (lbs)",        rate: "NOx Rate (lbs/mmBtu)"}
 
 aggregate:
-  period: "M"                    # M = شهري (فترة البيان)
+  period: "M"                    # M = aylık (beyan dönemi)
 
 sanity:
-  co2_per_heat_input_center: 0.105   # مؤكَّد من داتا Limestone (CV~0.07)
+  co2_per_heat_input_center: 0.105   # Limestone verisinden doğrulandı (CV~0.07)
   co2_per_heat_input_tol: 0.03
 
-# --- المرحلة ٢+٣ ---
+# --- Aşama 2+3 ---
 declaration:
-  honest_noise_std: 0.01     # ضجيج إبلاغ طبيعي ±1% (البيان الصادق ≈ القياس)
+  honest_noise_std: 0.01     # doğal raporlama gürültüsü ±%1 (dürüst beyan ≈ ölçüm)
   seed: 42
 
 tamper:
-  fraction: 0.35             # نسبة السجلّات التي نُلاعبها في مجموعة التقييم
+  fraction: 0.35             # değerlendirme kümesinde manipüle ettiğimiz kayıt oranı
   seed: 7
 
 check:
-  rel_tolerance: 0.05        # الفرق النسبي المسموح قبل رفع إشارة (البيان < القياس)
+  rel_tolerance: 0.05        # işaret kaldırmadan önce izin verilen bağıl fark (beyan < ölçüm)
 
 physics:
-  rel_tolerance: 0.10        # تسامح فحص أرضية معامل الانبعاث
-  ratio_low_quantile: 0.05   # حدّ أدنى لنِسَب الغازات (تحت هذا = مشبوه)
+  rel_tolerance: 0.10        # emisyon katsayısı tabanı kontrolü toleransı
+  ratio_low_quantile: 0.05   # gaz oranları için alt sınır (bunun altı = şüpheli)
 
 temporal:
-  mad_k: 3.5              # عتبة الانحراف: intensity < median - k*MAD = مشبوه
-  min_months: 3          # أدنى عدد أشهر لبناء خطّ أساس الوحدة
-  drift_slope_frac: 0.03 # ميل هبوط شهري يُعتبر انزياحاً زاحفاً
+  mad_k: 3.5              # sapma eşiği: intensity < median - k*MAD = şüpheli
+  min_months: 3          # birim temel çizgisini kurmak için en az ay sayısı
+  drift_slope_frac: 0.03 # kademeli kayma sayılan aylık düşüş eğimi
 
 peer:
-  low_quantile: 0.05   # كثافة تحت هذا المئين من توزيع القطاع = مشبوه
-  min_peers: 2         # أدنى عدد وحدات/مصانع لبناء مرجع القطاع
+  low_quantile: 0.05   # sektör dağılımının bu yüzdeliğinin altındaki yoğunluk = şüpheli
+  min_peers: 2         # sektör referansını kurmak için en az birim/tesis sayısı
 
 fusion:
   weights: {measurement: 45, physics: 30, peer: 25, temporal: 20}
-  high_threshold: 85     # درجة الثقة ≥ → اعتماد آلي
-  medium_threshold: 55   # [55,85) → طلب توضيح ؛ < 55 → تدقيق بشري
+  high_threshold: 85     # güven skoru ≥ → otomatik onay
+  medium_threshold: 55   # [55,85) → açıklama talebi ; < 55 → insan denetimi
 
 chain:
   schema_version: "emitax-ai/1.0"
@@ -79,3 +79,14 @@ lstm:
   hidden: 64
   epochs: 40
   threshold_pct: 99
+
+service:
+  host: "127.0.0.1"
+  # 8300 — çekirdek servis 8000'de durur. AI ayrı bir süreç olarak çalıştığı
+  # için portlar çakışmamalıdır (rapor §5.1). Çekirdek servis buraya
+  # EMITAX_AI_URL ile bağlanır.
+  port: 8300
+  measurement_path: "data/processed/monthly_measurement.csv"
+  hourly_path: "data/processed/hourly_clean.parquet"
+  onnx_path: "data/processed/lstm_ae.onnx"
+  meta_path: "data/processed/lstm_meta.json"

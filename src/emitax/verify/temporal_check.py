@@ -3,22 +3,22 @@ import numpy as np
 import pandas as pd
 
 # =========================================================
-#  الفحص الزمني (٤): مقارنة المصنع بتاريخه هو (self-referential)
-#  الأساس = كثافة انبعاثه (emission / energy) عبر أشهره.
-#  يمسك: هبوطاً مفاجئاً بشهر، وانزياحاً شهرياً زاحفاً للأسفل.
-#  ملاحظة تصميمية: التخفيض المنتظم عبر كل الأشهر لا يظهر هنا (الأساس ينزاح معه)
-#  → تمسكه الفحوص الخارجية (القياس/الفيزياء/الأقران). الفحوص تكميلية.
+#  Zamansal kontrol (4): tesisin kendi geçmişiyle karşılaştırılması (self-referential)
+#  Temel = emisyon yoğunluğu (emisyon / enerji), ayları boyunca.
+#  Yakalar: bir ayda ani düşüş ve aşağı yönlü kademeli aylık kayma.
+#  Tasarım notu: tüm aylara yayılmış düzenli azaltma burada görünmez (temel de onunla kayar)
+#  → bunu dış kontroller yakalar (ölçüm/fizik/akran). Kontroller tamamlayıcıdır.
 # =========================================================
 
 def _intensity(df: pd.DataFrame, gas: str) -> np.ndarray:
-    """كثافة = decl_<gas> / decl_heat_input (لكل شهر)."""
+    """yoğunluk = decl_<gas> / decl_heat_input (her ay için)."""
     e = df[f"decl_{gas}"].to_numpy(dtype=float)
     hi = df["decl_heat_input"].to_numpy(dtype=float)
     return np.divide(e, hi, out=np.full(len(df), np.nan), where=hi > 0)
 
 
 def _robust(x: np.ndarray) -> tuple[float, float]:
-    """وسيط + انحراف مطلق وسيطي (MAD مُقاس)."""
+    """ortanca + ortanca mutlak sapma (ölçekli MAD)."""
     x = x[np.isfinite(x)]
     if len(x) == 0:
         return np.nan, np.nan
@@ -28,10 +28,10 @@ def _robust(x: np.ndarray) -> tuple[float, float]:
 
 
 def check_temporal(declarations: pd.DataFrame, cfg: dict) -> pd.DataFrame:
-    """لكل (مصنع، وحدة): يبني خطّ أساس من كثافة الوحدة عبر أشهرها، ويعلّم:
-      - low_outlier: كثافة شهر < median - k*MAD (هبوط مفاجئ)
-      - creeping_drift: ميل هبوط زمني مستمرّ في الكثافة
-    يُرجع جدولاً طويلاً: facility, unit, ym, gas, rule, value, expected, flag, reason.
+    """Her (tesis, birim) için: birimin ayları boyunca yoğunluğundan bir temel çizgi kurar ve işaretler:
+      - low_outlier: bir ayın yoğunluğu < median - k*MAD (ani düşüş)
+      - creeping_drift: yoğunlukta sürekli aşağı yönlü zamansal eğim
+    Uzun tablo döndürür: facility, unit, ym, gas, rule, value, expected, flag, reason.
     """
     if "decl_heat_input" not in declarations.columns:
         return pd.DataFrame(columns=["facility", "unit", "ym", "gas", "rule", "flag"])
@@ -52,27 +52,27 @@ def check_temporal(declarations: pd.DataFrame, cfg: dict) -> pd.DataFrame:
             if not np.isfinite(med) or mad == 0:
                 mad = max(mad, 1e-9)
             low_th = med - k * mad
-            # (أ) هبوط مفاجئ لشهر
+            # (a) bir ay için ani düşüş
             for i in range(len(sub)):
                 if np.isfinite(inten[i]) and inten[i] < low_th:
                     rows.append({"facility": fac, "unit": unit, "ym": sub["ym"][i], "gas": g,
                                  "rule": "low_outlier", "value": inten[i], "expected": med,
-                                 "flag": True, "reason": f"كثافة {g} أقلّ من تاريخ الوحدة"})
-            # (ب) انزياح زاحف: ميل خطّي سالب معتدّ به
+                                 "flag": True, "reason": f"{g} yoğunluğu birimin geçmişinin altında"})
+            # (b) kademeli kayma: belirgin negatif doğrusal eğim
             idx = np.arange(len(sub))
             ok = np.isfinite(inten)
             if ok.sum() >= min_m:
                 slope = np.polyfit(idx[ok], inten[ok], 1)[0]
                 if med > 0 and slope < -drift_frac * med:
-                    # نعلّم آخر شهر كإشارة انزياح على مستوى الوحدة
+                    # birim düzeyinde kayma sinyali olarak son ayı işaretleriz
                     rows.append({"facility": fac, "unit": unit, "ym": sub["ym"].iloc[-1], "gas": g,
                                  "rule": "creeping_drift", "value": float(slope), "expected": 0.0,
-                                 "flag": True, "reason": f"انزياح هبوطي زاحف في {g}"})
+                                 "flag": True, "reason": f"{g} için kademeli düşüş eğilimi"})
     return pd.DataFrame(rows)
 
 
 def rollup_temporal(temporal_long: pd.DataFrame) -> pd.DataFrame:
-    """طيّ إلى مستوى السجل: مشبوه لو أي قاعدة زمنية عُلِّمت."""
+    """Kayıt düzeyine indirger: herhangi bir zamansal kural işaretlendiyse şüpheli."""
     if temporal_long.empty:
         return pd.DataFrame(columns=["facility", "unit", "ym", "temporal_flag", "fired_rules"])
 

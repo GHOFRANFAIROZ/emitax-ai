@@ -1,10 +1,10 @@
 """
-الدمج النهائي مع الـ LSTM — يشغّل الفحوص الأربعة (ومنها الـ LSTM عبر ONNX) + الدمج.
+LSTM ile nihai birleştirme — dört kontrolü (biri ONNX üzerinden LSTM) + birleştirmeyi çalıştırır.
 
     python run_fusion_lstm_demo.py
 
-يتطلّب: data/processed/lstm_ae.onnx + lstm_meta.json (من تدريب Colab)،
-        و monthly_measurement.csv + hourly_clean.parquet (من run_prepare.py).
+Gerektirir: data/processed/lstm_ae.onnx + lstm_meta.json (Colab eğitiminden),
+        ve monthly_measurement.csv + hourly_clean.parquet (run_prepare.py'den).
 """
 from __future__ import annotations
 import sys
@@ -28,7 +28,7 @@ def main() -> None:
     proc = Path(cfg["data"]["processed_dir"])
     onnx, meta = proc / "lstm_ae.onnx", proc / "lstm_meta.json"
     if not onnx.exists() or not meta.exists():
-        print("درّبي الـ LSTM على Colab أولاً وحطّي lstm_ae.onnx + lstm_meta.json في data/processed/."); return
+        print("önce Colab'da LSTM eğitin ve lstm_ae.onnx + lstm_meta.json dosyalarını data/processed/ içine koyun."); return
     measurement = pd.read_csv(proc / "monthly_measurement.csv")
     hourly = pd.read_parquet(proc / "hourly_clean.parquet")
     gases = gas_list(cfg, measurement)
@@ -41,16 +41,16 @@ def main() -> None:
         "measurement": rollup_records(run_check(mixed, measurement, cfg)),
         "physics":     rollup_physics(check_physics(mixed, fit_params(measurement, cfg), cfg)),
         "peer":        rollup_peer_iforest(check_peer_iforest(mixed, fit_iforest(measurement, cfg), cfg)),
-        "temporal":    rollup_temporal_lstm(detect_month_anomalies(hourly, sess, m, cfg)),  # LSTM عبر ONNX
+        "temporal":    rollup_temporal_lstm(detect_month_anomalies(hourly, sess, m, cfg)),  # ONNX üzerinden LSTM
     }
     decisions = decide(rollups, mixed, cfg)
     labeled = mixed.merge(decisions, on=["facility", "unit", "ym"], how="left")
     labeled["suspect"] = labeled["action"] != "approve"
     mm = detection_metrics(labeled["is_tampered"], labeled["suspect"])
-    print("[الدمج النهائي — 4 فحوص منها LSTM(ONNX)]")
+    print("[Nihai birleştirme — 4 kontrol, biri LSTM(ONNX)]")
     for k in ["recall", "fp_rate", "precision", "f1"]:
         print(f"   {k:10} = {mm[k]:.3f}")
-    print("\n[توزيع القرارات]")
+    print("\n[Karar dağılımı]")
     print(labeled.groupby(["is_tampered", "action"]).size().to_string())
 
 

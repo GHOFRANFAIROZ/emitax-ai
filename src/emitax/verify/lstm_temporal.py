@@ -4,13 +4,13 @@ import numpy as np
 import pandas as pd
 
 # =========================================================
-#  استدلال الفحص الزمني بالـ LSTM-AE عبر ONNX Runtime (تقرير 5.1)
-#  يحمّل نموذج ONNX + معايير التعيير + العتبة (bundle)، يحسب خطأ إعادة البناء
-#  للنوافذ الساعية، ويرفع علَماً زمنياً لكل (وحدة، شهر) يتجاوز العتبة.
+#  LSTM-AE ile zamansal kontrol çıkarımı, ONNX Runtime üzerinden (rapor 5.1)
+#  ONNX modelini + kalibrasyon parametrelerini + eşiği (bundle) yükler, yeniden inşa hatasını hesaplar
+#  saatlik pencereler için ve eşiği aşan her (birim, ay) için zamansal bayrak kaldırır.
 # =========================================================
 
 def load_bundle(onnx_path: str, meta_path: str):
-    """يحمّل جلسة ONNX + (mean,std,threshold,seq_len,feats) من ملف meta JSON."""
+    """ONNX oturumunu + (mean,std,threshold,seq_len,feats) meta JSON dosyasından yükler."""
     import onnxruntime as ort
     sess = ort.InferenceSession(onnx_path, providers=["CPUExecutionProvider"])
     meta = json.load(open(meta_path, encoding="utf-8"))
@@ -20,15 +20,15 @@ def load_bundle(onnx_path: str, meta_path: str):
 
 
 def _errors(sess, windows: np.ndarray) -> np.ndarray:
-    """خطأ إعادة البناء لكل نافذة عبر ONNX Runtime."""
+    """Her pencere için yeniden inşa hatası, ONNX Runtime üzerinden."""
     inp = sess.get_inputs()[0].name
     recon = sess.run(None, {inp: windows.astype(np.float32)})[0]
     return ((recon - windows) ** 2).mean(axis=(1, 2))
 
 
 def detect_month_anomalies(hourly: pd.DataFrame, sess, meta: dict, cfg: dict) -> pd.DataFrame:
-    """لكل (مصنع، وحدة، شهر): يبني نوافذ ساعية، يحسب خطأ إعادة البناء، ويعلّم الشهر
-    إن تجاوز أقصى خطأ فيه العتبة. يُرجع: facility, unit, ym, temporal_score, temporal_flag."""
+    """Her (tesis, birim, ay) için: saatlik pencereler kurar, yeniden inşa hatasını hesaplar ve ayı işaretler
+    içindeki en büyük hata eşiği aşarsa. Döndürür: facility, unit, ym, temporal_score, temporal_flag."""
     from emitax.models.hourly_windows import unit_feature_matrix, make_windows
     d, feats = unit_feature_matrix(hourly, cfg)
     d = d.copy()
@@ -50,6 +50,6 @@ def detect_month_anomalies(hourly: pd.DataFrame, sess, meta: dict, cfg: dict) ->
 
 
 def rollup_temporal_lstm(df: pd.DataFrame) -> pd.DataFrame:
-    """يوحّد المخرج مع بقية الفحوص (عمود temporal_flag لدمج fusion)."""
+    """Çıktıyı diğer kontrollerle birleştirir (fusion birleştirmesi için temporal_flag sütunu)."""
     cols = ["facility", "unit", "ym", "temporal_flag"]
     return df[cols] if not df.empty else pd.DataFrame(columns=cols)

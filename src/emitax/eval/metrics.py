@@ -2,11 +2,11 @@ from __future__ import annotations
 import pandas as pd
 
 # =========================================================
-#  مقاييس الكشف (على مستوى السجل)
+#  Tespit metrikleri (kayıt düzeyinde)
 # =========================================================
 
 def detection_metrics(labels: pd.Series, flags: pd.Series) -> dict:
-    """labels/flags منطقية بنفس الطول. يُرجع Recall, FP-rate, Precision, F1, TP/FP/FN/TN."""
+    """labels/flags aynı uzunlukta mantıksal. Döndürür: Recall, FP-rate, Precision, F1, TP/FP/FN/TN."""
     labels = labels.astype(bool).to_numpy()
     flags = flags.astype(bool).to_numpy()
     tp = int((labels & flags).sum())
@@ -22,7 +22,7 @@ def detection_metrics(labels: pd.Series, flags: pd.Series) -> dict:
 
 
 def by_scenario(mixed: pd.DataFrame, record_flags: pd.DataFrame) -> pd.DataFrame:
-    """Recall لكل سيناريو (على السجلّات المُلاعَبة فقط) + خطّ FP من الصادقة."""
+    """Her senaryo için Recall (yalnızca manipüle kayıtlar üzerinde) + dürüstlerden FP çizgisi."""
     j = mixed.merge(record_flags, on=["facility", "unit", "ym"], how="left")
     out = []
     for scen, sub in j.groupby("scenario"):

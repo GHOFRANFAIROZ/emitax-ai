@@ -8,3 +8,7 @@ torch
 onnx
 onnxscript
 onnxruntime
+fastapi
+uvicorn[standard]
+pydantic>=2
+httpx

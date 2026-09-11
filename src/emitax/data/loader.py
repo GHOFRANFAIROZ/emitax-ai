@@ -2,18 +2,18 @@ from __future__ import annotations
 import pandas as pd
 
 # =========================================================
-#  دوال pure — لا تقرأ من القرص، سهلة الاختبار
+#  pure fonksiyonlar — diskten okumaz, test edilmesi kolay
 # =========================================================
 
 def strip_cols(df: pd.DataFrame) -> pd.DataFrame:
-    """تنظيف أسماء الأعمدة من الفراغات."""
+    """Sütun adlarındaki boşlukları temizler."""
     df = df.copy()
     df.columns = [str(c).strip() for c in df.columns]
     return df
 
 
 def build_rename_map(cfg: dict) -> dict[str, str]:
-    """خريطة: الاسم الخام في CEMS → الاسم المنطقي. مبنية من الإعدادات (مرنة)."""
+    """Harita: CEMS'teki ham ad → mantıksal ad. Ayarlardan kurulur (esnek)."""
     c = cfg["columns"]
     m = {
         c["facility"]: "facility",
@@ -34,8 +34,8 @@ def build_rename_map(cfg: dict) -> dict[str, str]:
 
 
 def select_and_rename(df: pd.DataFrame, cfg: dict) -> tuple[pd.DataFrame, list[str]]:
-    """يبقي فقط الأعمدة المعروفة ويعيد تسميتها؛ يتجاهل أي أعمدة زائدة.
-    يعمل مهما اختلف عدد الأعمدة أو ترتيبها بين ملفّات مختلفة (مرونة الحجم/المخطّط)."""
+    """Yalnızca bilinen sütunları tutar ve yeniden adlandırır; fazla sütunları yok sayar.
+    Farklı dosyalar arasında sütun sayısı veya sırası değişse de çalışır (boyut/şema esnekliği)."""
     m = build_rename_map(cfg)
     present = {k: v for k, v in m.items() if k in df.columns}
     missing = [k for k in m if k not in df.columns]
@@ -43,7 +43,7 @@ def select_and_rename(df: pd.DataFrame, cfg: dict) -> tuple[pd.DataFrame, list[s
 
 
 def coerce_numeric(df: pd.DataFrame, cfg: dict) -> pd.DataFrame:
-    """تحويل الأعمدة الرقمية؛ أي قيمة غير رقمية → NaN بدل الانهيار."""
+    """Sayısal sütunları çevirir; sayısal olmayan her değer → çökmek yerine NaN."""
     df = df.copy()
     gases = cfg["columns"]["gases"]
     num = ["op_time", "heat_input", "gross_load"]
@@ -56,20 +56,20 @@ def coerce_numeric(df: pd.DataFrame, cfg: dict) -> pd.DataFrame:
 
 
 def build_timestamp(df: pd.DataFrame) -> pd.DataFrame:
-    """بناء عمود زمني من Date + Hour."""
+    """Date + Hour'dan bir zaman sütunu oluşturur."""
     df = df.copy()
     df["ts"] = pd.to_datetime(df["date"]) + pd.to_timedelta(df["hour"].astype(int), unit="h")
     return df
 
 
 # =========================================================
-#  المكان الوحيد الذي يقرأ من القرص (I/O)
+#  Diskten okuyan tek yer (I/O)
 # =========================================================
 
 def load_cems(path: str, cfg: dict) -> pd.DataFrame:
-    """قراءة ملف CEMS واحد (يدعم القراءة على دفعات للملفّات الكبيرة) → DataFrame منطقي نظيف.
+    """Tek bir CEMS dosyasını okur (büyük dosyalar için parça parça okumayı destekler) → temiz mantıksal DataFrame.
 
-    مرن مع الحجم: لو ضبطتِ data.chunksize يقرأ الملف على دفعات دون إغراق الذاكرة.
+    Boyutla esnek: data.chunksize ayarlarsanız dosyayı belleği taşırmadan parça parça okur.
     """
     chunksize = cfg["data"].get("chunksize")
     reader = pd.read_csv(path, chunksize=chunksize) if chunksize else [pd.read_csv(path)]
@@ -82,5 +82,5 @@ def load_cems(path: str, cfg: dict) -> pd.DataFrame:
     df = coerce_numeric(df, cfg)
     df = build_timestamp(df)
     if cfg["columns"].get("drop_all_nan", True):
-        df = df.dropna(axis=1, how="all")   # يحذف الأعمدة الفارغة كلياً (مثل Steam Load)
+        df = df.dropna(axis=1, how="all")   # Tamamen boş sütunları siler (Steam Load gibi)
     return df

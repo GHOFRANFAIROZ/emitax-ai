@@ -1,10 +1,10 @@
 """
-المرحلة ٥ — عرض الفحص الزمني (مقارنة المصنع بتاريخه هو).
+Aşama 5 — Zamansal kontrolün gösterimi (tesisin kendi geçmişiyle karşılaştırılması).
 
     python run_temporal_demo.py
 
-يبني بياناً صادقاً، يحقن (أ) تلاعباً عشوائياً مُوسوماً، (ب) انزياحاً زاحفاً،
-ويشغّل الفحص الزمني وحده ويطبع المقاييس.
+Dürüst beyan kurar, (a) etiketli rastgele manipülasyon, (b) kademeli kayma enjekte eder,
+yalnızca zamansal kontrolü çalıştırır ve metrikleri yazar.
 """
 from __future__ import annotations
 import sys
@@ -24,34 +24,34 @@ def main() -> None:
     cfg = load_config("configs/default.yaml")
     mpath = Path(cfg["data"]["processed_dir"]) / "monthly_measurement.csv"
     if not mpath.exists():
-        print("شغّلي run_prepare.py أولاً."); return
+        print("önce run_prepare.py çalıştırın."); return
     measurement = pd.read_csv(mpath)
     gases = gas_list(cfg, measurement)
     honest = generate_honest(measurement, cfg)
 
-    # (أ) تلاعب لكل شهر (هبوط مفاجئ)
+    # (a) her ay için manipülasyon (ani düşüş)
     mixed = make_labeled_set(honest, cfg, gases)
     tl = rollup_temporal(check_temporal(mixed, cfg))
     labeled = mixed.merge(tl, on=["facility", "unit", "ym"], how="left")
     labeled["temporal_flag"] = labeled["temporal_flag"].fillna(False)
     mm = detection_metrics(labeled["is_tampered"], labeled["temporal_flag"])
-    print("[الفحص الزمني وحده — تلاعب شهري متفرّق]")
+    print("[Yalnızca zamansal kontrol — dağınık aylık manipülasyon]")
     for kk in ["recall", "fp_rate", "precision", "f1"]:
         print(f"   {kk:10} = {mm[kk]:.3f}")
     print(f"   TP={mm['TP']} FP={mm['FP']} FN={mm['FN']} TN={mm['TN']}\n")
 
-    # (ب) انزياح زاحف: خفض تدريجي شهراً بعد شهر لوحدة واحدة
+    # (b) kademeli kayma: bir birim için ay ay tedrici azaltma
     drift = honest.copy()
     u = drift["unit"].unique()[0]
     mask = drift["unit"] == u
     months = drift.loc[mask].sort_values("ym").index
     for j, ix in enumerate(months):
-        f = 1.0 - 0.04 * j          # خفض 4% إضافي كل شهر
+        f = 1.0 - 0.04 * j          # her ay ek %4 azaltma
         for g in gases:
             drift.loc[ix, f"decl_{g}"] *= f
     dl = rollup_temporal(check_temporal(drift, cfg))
     fired = dl[dl["temporal_flag"]]["fired_rules"].str.contains("creeping_drift").any()
-    print(f"[انزياح زاحف] الوحدة {u}: أشير إلى creeping_drift؟ -> {'نعم' if fired else 'لا'}")
+    print(f"[Kademeli kayma] birim {u}: creeping_drift işaretlendi mi? -> {'evet' if fired else 'hayır'}")
 
 
 if __name__ == "__main__":

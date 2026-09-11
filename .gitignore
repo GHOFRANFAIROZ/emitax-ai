@@ -1,6 +1,15 @@
+# --- veri (buyuk / yeniden uretilebilir / public repoya gitmemeli) ---
 data/raw/*
 data/processed/*
+data/legal_corpus/
+data/rag_docs/
+data/*.csv
+**/.embed_index/
+*.onnx
+
+# --- gorseller / cache ---
 docs/eda/*.png
 __pycache__/
 *.pyc
+.pytest_cache/
 .venv/

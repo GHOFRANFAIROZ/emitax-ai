@@ -3,8 +3,8 @@ import numpy as np
 import pandas as pd
 
 # =========================================================
-#  مولّد التلاعب المُوسوم (اتّجاهي: تخفيض تحت الحقيقة)
-#  كل سيناريو يُعدّل صفوفاً محدّدة ويعلّمها is_tampered=True + اسم السيناريو
+#  Etiketli manipülasyon üreteci (yönlü: gerçeğin altına azaltma)
+#  Her senaryo belirli satırları değiştirir ve is_tampered=True + senaryo adıyla etiketler
 # =========================================================
 
 def _decl_col(gas: str) -> str:
@@ -13,28 +13,28 @@ def _decl_col(gas: str) -> str:
 
 def apply_scenario(decl: pd.DataFrame, idx, gases: list[str], scenario: str,
                    params: dict, rng: np.random.Generator) -> pd.DataFrame:
-    """يطبّق سيناريو تلاعب على الصفوف idx والغازات gases. يُرجع نسخة معدّلة."""
+    """idx satırlarına ve gases gazlarına bir manipülasyon senaryosu uygular. Değiştirilmiş bir kopya döndürür."""
     d = decl.copy()
     for g in gases:
         col = _decl_col(g)
         if col not in d.columns:
             continue
-        if scenario == "scale_down":                         # ضرب × عامل < 1
+        if scenario == "scale_down":                         # bir faktör < 1 ile çarpma
             d.loc[idx, col] = d.loc[idx, col] * params["factor"]
-        elif scenario == "zero_out":                          # تصفير (إخفاء أثناء التشغيل)
+        elif scenario == "zero_out":                          # sıfırlama (çalışma sırasında gizleme)
             d.loc[idx, col] = 0.0
-        elif scenario == "flatline":                          # تثبيت على كسر من الوسيط
+        elif scenario == "flatline":                          # ortancanın bir kesrine sabitleme
             d.loc[idx, col] = d[col].median() * params.get("value_frac", 0.5)
-        elif scenario == "cap":                               # قصّ سقف أعلى
+        elif scenario == "cap":                               # üst tavana kırpma
             ceil = d[col].quantile(params.get("q", 0.5))
             d.loc[idx, col] = d.loc[idx, col].clip(upper=ceil)
-        elif scenario == "ratio_break":                       # خفض غاز واحد فقط (يكسر النِسَب)
+        elif scenario == "ratio_break":                       # yalnızca tek bir gazı azaltma (oranları bozar)
             only = params.get("gas", g)
             if g == only:
                 d.loc[idx, col] = d.loc[idx, col] * params.get("factor", 0.6)
         else:
-            raise ValueError(f"سيناريو غير معروف: {scenario}")
-    # وسم
+            raise ValueError(f"bilinmeyen senaryo: {scenario}")
+    # etiketle
     d.loc[idx, "is_tampered"] = True
     d.loc[idx, "scenario"] = scenario
     d.loc[idx, "gases_tampered"] = ",".join(gases if scenario != "ratio_break" else [params.get("gas", gases[0])])
@@ -53,9 +53,9 @@ DEFAULT_SCENARIOS = [
 
 def make_labeled_set(honest: pd.DataFrame, cfg: dict, gases: list[str],
                      seed: int | None = None) -> pd.DataFrame:
-    """يبني مجموعة تقييم مُوسومة: يُلاعب نسبة من السجلّات بسيناريوهات عشوائية، والباقي يبقى صادقاً.
+    """Etiketli bir değerlendirme kümesi oluşturur: kayıtların bir kısmını rastgele senaryolarla manipüle eder, kalanı dürüst kalır.
 
-    كل سجل مُلاعَب يحمل is_tampered=True + scenario. مبذَّر → قابل لإعادة الإنتاج.
+    Her manipüle kayıt is_tampered=True + scenario taşır. tohumlu → tekrarlanabilir.
     """
     tcfg = cfg.get("tamper", {})
     frac = tcfg.get("fraction", 0.35)
@@ -68,7 +68,7 @@ def make_labeled_set(honest: pd.DataFrame, cfg: dict, gases: list[str],
 
     for row in victims:
         scenario, params = DEFAULT_SCENARIOS[rng.integers(len(DEFAULT_SCENARIOS))]
-        # لسيناريوهات كل الغازات: طبّق على الغازات كلّها؛ ratio_break على غاز واحد
+        # Tüm gaz senaryoları için: gazların hepsine uygula; ratio_break tek bir gaza
         tgt_gases = gases
         d = apply_scenario(d, [row], tgt_gases, scenario, params, rng)
     return d

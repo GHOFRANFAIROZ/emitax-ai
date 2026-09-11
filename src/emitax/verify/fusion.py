@@ -2,15 +2,15 @@ from __future__ import annotations
 import pandas as pd
 
 # =========================================================
-#  الدمج ودرجة الثقة (٠–١٠٠) وتدفّق القرار
-#  يوحّد مخرجات الفحوص الأربعة → درجة ثقة → قرار (اعتماد/توضيح/تدقيق بشري).
-#  ليس صندوقاً أسود: كل خصم مرتبط بفحص وسبب مقروء.
-#  السجل (الدرجة + الأسباب) هو الدليل الذي يُسجَّل على البلوكتشين — مستقلّ عن قرار الإنسان.
+#  Birleştirme, güven skoru (0–100) ve karar akışı
+#  Dört kontrolün çıktısını birleştirir → güven skoru → karar (onay/açıklama/insan denetimi).
+#  Kara kutu değil: her düşüş bir kontrole ve okunabilir bir gerekçeye bağlı.
+#  Kayıt (skor + gerekçeler) blokzincire yazılan kanıttır — insan kararından bağımsız.
 # =========================================================
 
 KEYS = ["facility", "unit", "ym"]
 
-# اسم الفحص → (عمود العلَم في rollup الخاص به، عمود سبب اختياري)
+# kontrol adı → (kendi rollup'undaki bayrak sütunu, opsiyonel gerekçe sütunu)
 CHECK_SPEC = {
     "measurement": ("record_flag", "flagged_gases"),
     "physics":     ("physics_flag", "fired_rules"),
@@ -18,19 +18,19 @@ CHECK_SPEC = {
     "temporal":    ("temporal_flag", "fired_rules"),
 }
 
-REASON_AR = {
-    "measurement": "البيان أقلّ من القياس",
-    "physics": "غير معقول فيزيائياً",
-    "peer": "أقلّ من القطاع",
-    "temporal": "انحراف عن تاريخ الوحدة",
+REASON_TR = {
+    "measurement": "Beyan ölçümün altında",
+    "physics": "Fiziksel olarak tutarsız",
+    "peer": "Sektörün altında",
+    "temporal": "Birimin geçmişinden sapma",
 }
 
 
 def combine_checks(rollups: dict[str, pd.DataFrame], base: pd.DataFrame) -> pd.DataFrame:
-    """يضمّ rollups الفحوص إلى إطار أساس (كل سجلّات البيان) ويملأ الغائب False.
+    """Kontrollerin rollup'larını bir temel çerçeveye (tüm beyan kayıtları) birleştirir, eksik olanı False doldurur.
 
-    rollups: {"measurement": df, "physics": df, "peer": df, "temporal": df} (أي مجموعة فرعية).
-    base: إطار فيه على الأقلّ الأعمدة KEYS (عادةً البيان نفسه).
+    rollups: {"measurement": df, "physics": df, "peer": df, "temporal": df} (herhangi bir alt küme).
+    base: en az KEYS sütunlarını içeren çerçeve (genellikle beyanın kendisi).
     """
     out = base[KEYS].drop_duplicates().copy()
     for name, df in rollups.items():
@@ -45,7 +45,7 @@ def combine_checks(rollups: dict[str, pd.DataFrame], base: pd.DataFrame) -> pd.D
 
 
 def fuse(combined: pd.DataFrame, cfg: dict) -> pd.DataFrame:
-    """يحسب درجة الثقة والقرار والسبب لكل سجل. دالة pure."""
+    """Her kayıt için güven skoru, karar ve gerekçe hesaplar. pure fonksiyon."""
     fcfg = cfg.get("fusion", {})
     weights = fcfg.get("weights", {"measurement": 45, "physics": 30, "peer": 25, "temporal": 20})
     hi = fcfg.get("high_threshold", 85)
@@ -61,12 +61,12 @@ def fuse(combined: pd.DataFrame, cfg: dict) -> pd.DataFrame:
                 fired.append(name)
         trust = max(0, min(100, 100 - penalty))
         if trust >= hi:
-            action = "approve"          # اعتماد آلي → بلوكتشين
+            action = "approve"          # otomatik onay → blokzincir
         elif trust >= med:
-            action = "request_docs"     # طلب توضيح/وثيقة (١٥ يوماً)
+            action = "request_docs"     # açıklama/belge talebi (15 gün)
         else:
-            action = "human_review"     # طابور تدقيق بشري
-        reason = "؛ ".join(REASON_AR[c] for c in fired) if fired else "لا تعارض"
+            action = "human_review"     # insan denetimi kuyruğu
+        reason = "; ".join(REASON_TR[c] for c in fired) if fired else "Çelişki yok"
         rows.append({**{k: r[k] for k in KEYS},
                      "trust_score": trust, "action": action,
                      "fired_checks": ",".join(fired), "n_checks": len(fired),
@@ -75,5 +75,5 @@ def fuse(combined: pd.DataFrame, cfg: dict) -> pd.DataFrame:
 
 
 def decide(rollups: dict[str, pd.DataFrame], base: pd.DataFrame, cfg: dict) -> pd.DataFrame:
-    """اختصار: دمج + تسجيل درجة الثقة والقرار في خطوة واحدة."""
+    """Kısaltma: birleştirme + güven skoru ve kararı tek adımda kaydetme."""
     return fuse(combine_checks(rollups, base), cfg)

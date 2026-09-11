@@ -4,18 +4,18 @@ import json
 from datetime import datetime, timezone
 
 # =========================================================
-#  عقد الإخراج للبلوكتشين (الحلقة الأخيرة)
-#  الـ AI يُنتج «سجل تحقّق» قانونياً مع بصمة سلامة (hash).
-#  على السلسلة: الملخّص + البصمة (دليل ثابت مضادّ للتواطؤ).
-#  خارج السلسلة: السجل الكامل (القيَم الخام).
-#  تعديل أي قيمة يغيّر البصمة → يُكشف فوراً.
+#  Blokzincir çıkış sözleşmesi (son halka)
+#  AI, bütünlük parmak izi (hash) ile hukuki bir «doğrulama kaydı» üretir.
+#  Zincirde: özet + parmak izi (değişmez, gizli anlaşmaya karşı kanıt).
+#  Zincir dışında: tam kayıt (ham değerler).
+#  Herhangi bir değeri değiştirmek parmak izini değiştirir → anında tespit edilir.
 # =========================================================
 
 SCHEMA_VERSION = "emitax-ai/1.0"
 
 
 def _canonical(obj) -> str:
-    """JSON قانوني حتمي (مفاتيح مرتّبة، بلا فراغات) — أساس بصمة قابلة لإعادة الإنتاج."""
+    """Belirlenimci kanonik JSON (sıralı anahtarlar, boşluksuz) — tekrarlanabilir parmak izinin temeli."""
     return json.dumps(obj, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
 
 
@@ -25,11 +25,11 @@ def _sha256(s: str) -> str:
 
 def build_record(decision: dict, declaration: dict, measurement: dict | None,
                  cfg: dict, verified_at: str | None = None) -> dict:
-    """يبني سجل تحقّق كامل لبيان واحد.
+    """Tek bir beyan için eksiksiz doğrulama kaydı oluşturur.
 
-    decision: صف من مخرجات fuse (trust_score, action, fired_checks, reason...).
-    declaration: صف البيان (decl_<gas>...). measurement: صف القياس (اختياري).
-    verified_at: مرّريه ثابتاً للاختبارات؛ افتراضياً وقت التحقّق الآن.
+    decision: fuse çıktısından bir satır (trust_score, action, fired_checks, reason...).
+    declaration: beyan satırı (decl_<gas>...). measurement: ölçüm satırı (opsiyonel).
+    verified_at: testler için sabit verin; varsayılan olarak şu anki doğrulama zamanı.
     """
     gases = list(cfg["columns"]["gases"])
     declared = {g: float(declaration[f"decl_{g}"]) for g in gases if f"decl_{g}" in declaration}
@@ -51,13 +51,13 @@ def build_record(decision: dict, declaration: dict, measurement: dict | None,
         "fired_checks": fired, "reason": decision.get("reason", ""),
         "verified_at": va, "data_hash": data_hash,
     }
-    # بصمة السجل تغطّي كل شيء عدا نفسها
+    # Kayıt parmak izi, kendisi hariç her şeyi kapsar
     record["record_hash"] = _sha256(_canonical(record))
     return record
 
 
 def onchain_payload(record: dict) -> dict:
-    """ما يُسجَّل على السلسلة: ملخّص القرار + البصمتان فقط (بلا قيَم خام)."""
+    """Zincire yazılan: karar özeti + iki parmak izi (ham değer yok)."""
     return {
         "record_id": record["record_id"], "facility": record["facility"],
         "unit": record["unit"], "period": record["period"],
@@ -68,20 +68,20 @@ def onchain_payload(record: dict) -> dict:
 
 
 def offchain_payload(record: dict) -> dict:
-    """ما يُخزَّن خارج السلسلة: السجل الكامل (القيَم الخام + الأسباب)."""
+    """Zincir dışında saklanan: tam kayıt (ham değerler + gerekçeler)."""
     return dict(record)
 
 
 def verify_record(record: dict) -> bool:
-    """يتحقّق أنّ record_hash يطابق محتوى السجل (كشف أي تعديل لاحق)."""
+    """record_hash'in kayıt içeriğiyle eşleştiğini doğrular (sonraki her değişikliği tespit)."""
     r = {k: v for k, v in record.items() if k != "record_hash"}
     return _sha256(_canonical(r)) == record.get("record_hash")
 
 
 def export_decisions(decisions, declarations, measurement, cfg, verified_at: str | None = None):
-    """يبني سجلّات التحقّق لكل القرارات ويُرجع (onchain[list], offchain[list]).
+    """Tüm kararlar için doğrulama kayıtları oluşturur ve (onchain[list], offchain[list]) döndürür.
 
-    يضمّ كل قرار بصفّي البيان والقياس المطابقين (على facility/unit/period).
+    Her kararı, eşleşen beyan ve ölçüm satırlarıyla birleştirir (facility/unit/period üzerinden).
     """
     keys = ["facility", "unit", "ym"]
     decl_idx = {(r["facility"], r["unit"], r["ym"]): r for _, r in declarations.iterrows()}

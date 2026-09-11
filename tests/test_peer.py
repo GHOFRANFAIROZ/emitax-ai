@@ -20,7 +20,7 @@ GASES = ["CO2", "SO2", "NOx"]
 
 
 def _measurement():
-    # وحدتان متشابهتان (قطاع) بكثافة CO2 ثابتة ~0.1
+    # iki benzer birim (sektör), ~0.1 sabit CO2 yoğunluğuyla
     hi = np.array([1000.0, 1200.0, 1100.0, 900.0, 1000.0, 1300.0])
     return pd.DataFrame({
         "facility": ["A"] * 6, "unit": ["U1", "U1", "U1", "U2", "U2", "U2"],
@@ -46,7 +46,7 @@ def test_honest_within_sector():
 def test_uniform_underreport_caught_by_peer():
     m = _measurement(); p = build_peer_pool(m, CFG)
     h = generate_honest(m, CFG)
-    # تخفيض منتظم لكل صفوف U1 → كثافته تحت القطاع
+    # U1'in tüm satırlarında düzenli azaltma → yoğunluğu sektörün altında
     idx = h.index[h["unit"] == "U1"].tolist()
     t = apply_scenario(h.copy(), idx, GASES, "scale_down", {"factor": 0.6}, np.random.default_rng(0))
     r = rollup_peer(check_peer(t, p, CFG))

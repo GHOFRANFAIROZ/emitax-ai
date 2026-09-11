@@ -36,7 +36,7 @@ def _measurement():
 def test_honest_equals_measurement_when_no_noise():
     m = _measurement()
     h = generate_honest(m, CFG)
-    # بلا ضجيج → البيان = القياس، وكلّها غير مُلاعَبة
+    # gürültüsüz → beyan = ölçüm ve hiçbiri manipüle değil
     assert np.allclose(h["decl_CO2"], m["CO2_mass"])
     assert (~h["is_tampered"]).all()
 
@@ -45,7 +45,7 @@ def test_honest_not_flagged_by_check():
     m = _measurement()
     h = generate_honest(m, CFG)
     records = rollup_records(run_check(h, m, CFG))
-    assert records["record_flag"].sum() == 0        # لا إنذارات كاذبة على الصادق
+    assert records["record_flag"].sum() == 0        # dürüst üzerinde yanlış alarm yok
 
 
 def test_scale_down_is_caught():
@@ -54,13 +54,13 @@ def test_scale_down_is_caught():
     t = apply_scenario(h.copy(), h.index.tolist(), GASES, "scale_down",
                        {"factor": 0.7}, np.random.default_rng(0))
     records = rollup_records(run_check(t, m, CFG))
-    assert records["record_flag"].all()             # تخفيض 30% يُكشَف كلّه
+    assert records["record_flag"].all()             # %30 azaltmanın tamamı tespit edilir
 
 
 def test_check_is_directional_over_report_not_flagged():
     m = _measurement()
     h = generate_honest(m, CFG)
-    # مبالغة (أعلى من القياس) يجب ألّا تُعلَّم — نهتمّ بالتخفيض فقط
+    # abartma (ölçümün üstünde) işaretlenmemeli — yalnızca azaltmayla ilgileniriz
     over = apply_scenario(h.copy(), h.index.tolist(), GASES, "scale_down",
                           {"factor": 1.3}, np.random.default_rng(0))
     records = rollup_records(run_check(over, m, CFG))

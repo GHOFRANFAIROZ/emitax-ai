@@ -1,0 +1,4 @@
+# Emitax RAG - vektor DB (embeddings) icin ek gereksinimler
+# Kurulum: pip install -r requirements_rag.txt
+sentence-transformers>=2.2
+faiss-cpu>=1.7

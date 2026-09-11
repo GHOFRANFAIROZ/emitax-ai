@@ -3,14 +3,14 @@ import numpy as np
 import pandas as pd
 
 # =========================================================
-#  إنذار ارتفاع الانبعاث (طلب İsmail)
-#  اتّجاهي للأعلى — عكس كشف الغشّ. ينبّه: "الانبعاث مرتفع — افحص/غيّر البِلَع".
-#  قاعدة بسيطة (ليست ML): كثافة أعلى بكثير من الوسيط الطبيعي (× مضاعِف)،
-#  أو تجاوز حدّ قياس مطلق اختياري.
+#  Emisyon yükseliş alarmı (İsmail'in talebi)
+#  Yukarı yönlü — hile tespitinin tersi. Uyarır: "Emisyon yüksek — filtre/arıtmayı kontrol edin/değiştirin".
+#  Basit kural (ML değil): normal ortancadan çok yüksek yoğunluk (× çarpan),
+#  veya opsiyonel mutlak bir ölçüm sınırının aşılması.
 # =========================================================
 
 def fit_alarm_bounds(reference, cfg):
-    """يحسب حدّ التحذير/الحرج لكل غاز = مضاعِف × وسيط كثافة القطاع الطبيعي."""
+    """Her gaz için uyarı/kritik sınırı hesaplar = çarpan × normal sektör yoğunluğu ortancası."""
     gases = [g for g in cfg["columns"]["gases"] if f"{g}_mass" in reference.columns]
     a = cfg.get("alarm", {})
     warn_m = a.get("warn_multiplier", 1.3); crit_m = a.get("crit_multiplier", 1.6)
@@ -29,8 +29,8 @@ def fit_alarm_bounds(reference, cfg):
 
 
 def check_emission_alarm(declarations, bounds, cfg):
-    """يفحص كل بيان: هل كثافة الانبعاث فوق حدّ التحذير/الحرج؟
-    يُرجع: facility, unit, ym, gas, intensity, level (warning/critical), message."""
+    """Her beyanı kontrol eder: emisyon yoğunluğu uyarı/kritik sınırının üstünde mi?
+    Döndürür: facility, unit, ym, gas, intensity, level (warning/critical), message."""
     if "decl_heat_input" not in declarations.columns:
         return pd.DataFrame(columns=["facility", "unit", "ym", "gas", "level"])
     d = declarations.reset_index(drop=True)
@@ -47,9 +47,9 @@ def check_emission_alarm(declarations, bounds, cfg):
             if not np.isfinite(v):
                 continue
             if v >= b["crit"]:
-                level, msg = "critical", f"{g} emisyonu cok yuksek — bilesenleri kontrol edin/degistirin"
+                level, msg = "critical", f"{g} emisyonu çok yüksek — bileşenleri kontrol edin/değiştirin"
             elif v >= b["warn"]:
-                level, msg = "warning", f"{g} emisyonu yuksek — kontrol onerilir"
+                level, msg = "warning", f"{g} emisyonu yüksek — kontrol önerilir"
             else:
                 continue
             rows.append({"facility": d["facility"][i], "unit": d["unit"][i], "ym": d["ym"][i],
@@ -58,7 +58,7 @@ def check_emission_alarm(declarations, bounds, cfg):
 
 
 def rollup_alarm(alarm_long):
-    """طيّ إلى مستوى السجل: أعلى مستوى إنذار + الغازات المعنيّة."""
+    """Kayıt düzeyine indirger: en yüksek alarm seviyesi + ilgili gazlar."""
     if alarm_long.empty:
         return pd.DataFrame(columns=["facility", "unit", "ym", "alarm_level", "alarm_gases"])
     order = {"warning": 1, "critical": 2}

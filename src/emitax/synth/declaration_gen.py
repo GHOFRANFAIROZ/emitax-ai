@@ -3,8 +3,8 @@ import numpy as np
 import pandas as pd
 
 # =========================================================
-#  مولّد البيان الشهري الصادق
-#  البيان الصادق ≈ القياس + ضجيج إبلاغ صغير (تقريب/تقريب رقمي طبيعي)
+#  Dürüst aylık beyan üreteci
+#  Dürüst beyan ≈ ölçüm + küçük raporlama gürültüsü (doğal sayısal yuvarlama)
 # =========================================================
 
 def gas_list(cfg: dict, monthly: pd.DataFrame) -> list[str]:
@@ -12,11 +12,11 @@ def gas_list(cfg: dict, monthly: pd.DataFrame) -> list[str]:
 
 
 def generate_honest(monthly: pd.DataFrame, cfg: dict, seed: int | None = None) -> pd.DataFrame:
-    """يبني بياناً شهرياً صادقاً لكل (مصنع، وحدة، شهر) من القياس.
+    """Her (tesis, birim, ay) için ölçümden dürüst aylık beyan oluşturur.
 
-    decl_<gas> = measured_<gas> * (1 + ضجيج صغير)  ثم قصّ عند صفر.
-    يضيف decl_heat_input (للفحص الفيزيائي لاحقاً) و is_tampered=False.
-    مبذَّر (seed) → قابل لإعادة الإنتاج.
+    decl_<gas> = measured_<gas> * (1 + küçük gürültü)  ardından sıfırda kırpma.
+    decl_heat_input ekler (sonraki fiziksel kontrol için) ve is_tampered=False.
+    tohumlu (seed) → tekrarlanabilir.
     """
     gases = gas_list(cfg, monthly)
     std = cfg.get("declaration", {}).get("honest_noise_std", 0.01)

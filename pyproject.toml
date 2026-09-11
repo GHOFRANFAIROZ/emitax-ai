@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "emitax-ai"
+version = "1.0.0"
+description = "Emitax AI Doğrulama Servisi — dört kontrol ve güven skoru"
+requires-python = ">=3.10"
+dependencies = [
+    "fastapi", "uvicorn", "pydantic",
+    "pandas", "numpy", "pyarrow",
+    "scikit-learn", "onnxruntime",
+    "pyyaml",
+]
+
+# src-layout: paket src/emitax altındadır.
+[tool.setuptools.packages.find]
+where = ["src"]
+
+# Artefaktlar (parquet/onnx/csv) pakete GİRMEZ; data/processed altında durur ve
+# çalışma zamanında paket kökünden okunur. Model dosyaları depoda ayrı yaşar.

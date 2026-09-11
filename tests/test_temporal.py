@@ -35,7 +35,7 @@ def test_honest_history_no_flags():
 
 def test_single_month_drop_is_flagged():
     m = _measurement(); h = generate_honest(m, CFG)
-    h.loc[3, "decl_CO2"] *= 0.5          # هبوط مفاجئ بشهر واحد
+    h.loc[3, "decl_CO2"] *= 0.5          # tek bir ayda ani düşüş
     r = rollup_temporal(check_temporal(h, CFG))
     hit = r[(r["ym"] == "2025-04") & (r["temporal_flag"])]
     assert len(hit) == 1
@@ -45,6 +45,6 @@ def test_creeping_drift_is_flagged():
     m = _measurement(12); h = generate_honest(m, CFG)
     for j, ix in enumerate(h.index):
         for g in ["CO2", "SO2", "NOx"]:
-            h.loc[ix, f"decl_{g}"] *= (1.0 - 0.05 * j)   # خفض زاحف
+            h.loc[ix, f"decl_{g}"] *= (1.0 - 0.05 * j)   # kademeli azaltma
     r = rollup_temporal(check_temporal(h, CFG))
     assert r["fired_rules"].str.contains("creeping_drift").any()

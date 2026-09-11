@@ -25,7 +25,7 @@ CFG = {
 
 def _raw():
     return pd.DataFrame({
-        " Facility Name ": ["A", "A", "A"],          # فراغات مقصودة لاختبار strip
+        " Facility Name ": ["A", "A", "A"],          # strip testi için kasıtlı boşluklar
         "Facility ID": [1, 1, 1],
         "Unit ID": ["U1", "U1", "U1"],
         "Date": ["2025-01-01", "2025-01-01", "2025-02-01"],
@@ -37,8 +37,8 @@ def _raw():
         "SO2 Mass (lbs)": [1.0, 2.0, 0.5],
         "NOx Mass (lbs)": [3.0, 4.0, 1.0],
         "Primary Fuel Type": ["Coal", "Coal", "Coal"],
-        "Steam Load (1000 lb/hr)": [None, None, None],   # فارغ كلياً
-        "Some Extra Column": ["x", "y", "z"],            # عمود زائد يُتجاهَل
+        "Steam Load (1000 lb/hr)": [None, None, None],   # tamamen boş
+        "Some Extra Column": ["x", "y", "z"],            # yok sayılan fazla sütun
     })
 
 
@@ -46,7 +46,7 @@ def test_strip_and_select_ignores_extra_and_missing():
     raw = loader.strip_cols(_raw())
     tidy, missing = loader.select_and_rename(raw, CFG)
     assert "facility" in tidy.columns and "CO2_mass" in tidy.columns
-    assert "Some Extra Column" not in tidy.columns          # الزائد يُتجاهَل
+    assert "Some Extra Column" not in tidy.columns          # fazlalık yok sayılır
     assert isinstance(missing, list)
 
 

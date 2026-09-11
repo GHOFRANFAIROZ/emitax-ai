@@ -4,10 +4,10 @@ import pandas as pd
 from sklearn.ensemble import IsolationForest
 
 # =========================================================
-#  فحص الأقران (دعم مزدوج: الدوال القديمة لـ test_peer.py + Isolation Forest)
+#  Akran kontrolü (çift destek: test_peer.py için eski fonksiyonlar + Isolation Forest)
 # =========================================================
 
-# --- الدوال القديمة (لضمان نجاح اختبارات test_peer.py القديمة) ---
+# --- eski fonksiyonlar (eski test_peer.py testlerinin geçmesi için) ---
 def build_peer_pool(reference: pd.DataFrame, cfg: dict) -> dict:
     gases = [g for g in cfg["columns"]["gases"] if f"{g}_mass" in reference.columns]
     lq = cfg.get("peer", {}).get("low_quantile", 0.05)
@@ -42,7 +42,7 @@ def check_peer(declarations: pd.DataFrame, pool: dict, cfg: dict) -> pd.DataFram
                          "gas": g, "rule": "peer_low_intensity",
                          "intensity": inten[i], "sector_low": band["low"],
                          "flag": flagged,
-                         "reason": f"كثافة {g} أقلّ من القطاع" if flagged else ""})
+                         "reason": f"{g} yoğunluğu sektörün altında" if flagged else ""})
     return pd.DataFrame(rows)
 
 
@@ -58,7 +58,7 @@ def rollup_peer(peer_long: pd.DataFrame) -> pd.DataFrame:
             .apply(_agg, include_groups=False).reset_index())
 
 
-# --- دوال Isolation Forest الجديدة (لتطابق التقرير 5.2) ---
+# --- yeni Isolation Forest fonksiyonları (rapor 5.2 ile uyum için) ---
 
 def _intensities(df: pd.DataFrame, gases: list[str], mass_suffix: str) -> pd.DataFrame:
     hi = df["heat_input"] if mass_suffix == "_mass" else df["decl_heat_input"]

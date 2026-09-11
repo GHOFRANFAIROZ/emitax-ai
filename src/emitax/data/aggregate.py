@@ -2,15 +2,15 @@ from __future__ import annotations
 import pandas as pd
 
 # =========================================================
-#  التجميع الشهري: القياس الموضوعي الذي يُقارَن به البيان (الفحص ١)
+#  Aylık toplulaştırma: beyanın kendisiyle karşılaştırıldığı nesnel ölçüm (Kontrol 1)
 # =========================================================
 
 def aggregate_monthly(df: pd.DataFrame, cfg: dict) -> pd.DataFrame:
-    """تحويل الساعي → شهري لكل (مصنع، وحدة).
+    """Saatliği → aylığa çevir, her (tesis, birim) için.
 
-    يجمع كتل الغازات والطاقة عبر الشهر (ساعات التشغيل تُجمَع عبر NaN=يُتجاهَل).
-    الناتج = «القياس» الشهري الحقيقي الذي سنقارن به بيان المصنع.
-    دالة pure.
+    Gaz ve enerji kütlelerini ay boyunca toplar (çalışma saatleri NaN=yok sayılarak toplanır).
+    Sonuç = tesisin beyanıyla karşılaştıracağımız gerçek aylık «ölçüm».
+    pure fonksiyon.
     """
     gases = list(cfg["columns"]["gases"])
     d = df.copy()
@@ -38,9 +38,9 @@ def aggregate_monthly(df: pd.DataFrame, cfg: dict) -> pd.DataFrame:
 
 
 def measurement_available(df: pd.DataFrame, cfg: dict) -> pd.DataFrame:
-    """لكل (مصنع، وحدة): هل يوجد قياس غازات حقيقي (ليس كلّه NaN)؟ = هل يوجد SEÖS/CEMS.
+    """Her (tesis, birim) için: gerçek gaz ölçümü var mı (hepsi NaN değil)? = SEÖS/CEMS var mı.
 
-    يحدّد أي فحوص تنطبق: مع قياس → الفحص ١ رئيسي؛ بدون → نعتمد الفحوص ٢/٣/٤.
+    Hangi kontrollerin geçerli olduğunu belirler: ölçüm varsa → Kontrol 1 ana; yoksa → Kontrol 2/3/4'e dayanırız.
     """
     gases = list(cfg["columns"]["gases"])
     mass_cols = [f"{g}_mass" for g in gases if f"{g}_mass" in df.columns]

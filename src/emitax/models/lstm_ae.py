@@ -1,7 +1,7 @@
 from __future__ import annotations
 import numpy as np
 
-# LSTM-Autoencoder (PyTorch) — الفحص الزمني. torch يُستورَد داخل الدوال (ثقيل، على Colab).
+# LSTM-Autoencoder (PyTorch) — zamansal kontrol. torch fonksiyonların içinde import edilir (ağır, Colab'da).
 
 def build_model(n_features: int, seq_len: int, latent: int = 64, hidden: int = 128):
     import torch
@@ -59,17 +59,14 @@ def reconstruction_error(model, X, device: str = "cpu") -> np.ndarray:
     return err.cpu().numpy()
 
 
-def export_onnx(model, seq_len: int, n_features: int, path: str, device: str = "cpu"):
-    """يصدّر النموذج إلى ONNX باستخدام المُصدّر المستقر القديم لتجنب قيود الـ dynamo."""
+def export_onnx(model, seq_len, n_features, path, device="cpu"):
     import torch
     model = model.to(device).eval()
-    dummy = torch.randn(2, seq_len, n_features, device=device)          # batch=2, seq ثابت (24)
+    dummy = torch.randn(2, seq_len, n_features, device=device)
     torch.onnx.export(
         model, dummy, path,
         input_names=["window"], output_names=["reconstruction"],
-        dynamic_axes={"window": {0: "batch"}, "reconstruction": {0: "batch"}},    # batch وحده ديناميكي
-        opset_version=17,
-        do_constant_folding=True,
-        dynamo=False,                                     # ← المفتاح السحري لإجبار المُصدّر القديم
+        dynamic_axes={"window": {0: "batch"}, "reconstruction": {0: "batch"}},
+        opset_version=17, do_constant_folding=True, dynamo=False,
     )
     return path

@@ -20,7 +20,7 @@ GASES = ["CO2", "SO2", "NOx"]
 
 
 def _measurement():
-    # CO2 ≈ 0.1 * heat_input بثبات (معامل انبعاث نظيف)
+    # CO2 ≈ 0.1 * heat_input sabit (temiz emisyon katsayısı)
     hi = np.array([1000.0, 1200.0, 1100.0, 900.0, 1300.0, 800.0])
     return pd.DataFrame({
         "facility": ["A"] * 6, "unit": ["U1"] * 6,
@@ -51,13 +51,13 @@ def test_physics_catches_scale_down_via_co2_floor():
     t = apply_scenario(h.copy(), h.index.tolist(), GASES, "scale_down",
                        {"factor": 0.6}, np.random.default_rng(0))
     r = rollup_physics(check_physics(t, p, CFG))
-    assert r["physics_flag"].all()          # CO₂ تحت أرضية الوقود
+    assert r["physics_flag"].all()          # CO₂ yakıt tabanının altında
 
 
 def test_physics_catches_ratio_break():
     m = _measurement(); p = fit_params(m, CFG)
     h = generate_honest(m, CFG)
-    # خفض SO2 فقط → يكسر نسبة SO2/CO2
+    # yalnızca SO2 azaltma → SO2/CO2 oranını bozar
     t = apply_scenario(h.copy(), h.index.tolist(), GASES, "ratio_break",
                        {"gas": "SO2", "factor": 0.3}, np.random.default_rng(0))
     r = rollup_physics(check_physics(t, p, CFG))

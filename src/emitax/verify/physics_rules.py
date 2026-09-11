@@ -3,14 +3,14 @@ import numpy as np
 import pandas as pd
 
 # =========================================================
-#  الفحص الفيزيائي (٢): معقولية البيان بذاته — لا يحتاج القياس
-#  (أ) أرضية معامل الانبعاث: الوقود/الطاقة المُصرَّحة لا يمكن أن تنتج CO₂ أقلّ من حدّها.
-#  (ب) نِسَب الغازات: خفض غاز واحد يكسر النسبة ويترك أثراً.
-#  المعايير تُتعلَّم من القياس (data-driven) → مرنة مع أي داتا.
+#  Fiziksel kontrol (2): beyanın kendi içinde makullüğü — ölçüme ihtiyaç yok
+#  (a) emisyon katsayısı tabanı: beyan edilen yakıt/enerji, sınırının altında CO₂ üretemez.
+#  (b) gaz oranları: tek bir gazı azaltmak oranı bozar ve iz bırakır.
+#  Parametreler ölçümden öğrenilir (data-driven) → her veriyle esnek.
 # =========================================================
 
 def _ipcc_co2_factor(measurement: pd.DataFrame, cfg: dict) -> float:
-    """معامل انبعاث CO₂ مرجعي من IPCC 2006 حسب نوع الوقود (يُطبَّق لا يُتعلَّم)."""
+    """IPCC 2006'dan yakıt türüne göre referans CO₂ emisyon katsayısı (öğrenilmez, uygulanır)."""
     ipcc = cfg.get("physics_ipcc", {})
     factors = ipcc.get("co2_factor_by_fuel", {})
     fuel = ""
@@ -23,11 +23,11 @@ def _ipcc_co2_factor(measurement: pd.DataFrame, cfg: dict) -> float:
 
 
 def fit_params(measurement: pd.DataFrame, cfg: dict) -> dict:
-    """معامل CO₂ من IPCC 2006 (مُطبَّق) + الحدود الدنيا لنِسَب الغازات (من الداتا)."""
+    """IPCC 2006'dan CO₂ katsayısı (uygulanır) + gaz oranları için alt sınırlar (veriden)."""
     gases = [g for g in cfg["columns"]["gases"] if f"{g}_mass" in measurement.columns]
     d = measurement[measurement.get("heat_input", 0) > 0].copy()
 
-    co2_factor = _ipcc_co2_factor(measurement, cfg)   # IPCC 2006، ليس متعلَّماً
+    co2_factor = _ipcc_co2_factor(measurement, cfg)   # IPCC 2006, öğrenilmiş değil
 
     ql = cfg.get("physics", {}).get("ratio_low_quantile", 0.05)
     ratios = {}
@@ -42,12 +42,12 @@ def fit_params(measurement: pd.DataFrame, cfg: dict) -> dict:
 
 
 def check_physics(declarations: pd.DataFrame, params: dict, cfg: dict) -> pd.DataFrame:
-    """يطبّق الفحص الفيزيائي على البيان. يُرجع جدولاً طويلاً: rule, gas, value, expected, flag, reason."""
+    """Fiziksel kontrolü beyana uygular. Uzun tablo döndürür: rule, gas, value, expected, flag, reason."""
     tol = cfg.get("physics", {}).get("rel_tolerance", 0.10)
     rows = []
     d = declarations.reset_index(drop=True)
 
-    # (أ) أرضية معامل الانبعاث لـ CO₂ من الطاقة المُصرَّحة
+    # (a) beyan edilen enerjiden CO₂ için emisyon katsayısı tabanı
     if params.get("co2_hi_factor") and "decl_heat_input" in d.columns and "decl_CO2" in d.columns:
         expected = d["decl_heat_input"].to_numpy() * params["co2_hi_factor"]
         declared = d["decl_CO2"].to_numpy()
@@ -58,9 +58,9 @@ def check_physics(declarations: pd.DataFrame, params: dict, cfg: dict) -> pd.Dat
                          "rule": "co2_emission_floor", "gas": "CO2",
                          "value": declared[i], "expected": expected[i],
                          "flag": bool(rel[i] < -tol),
-                         "reason": "CO₂ المُصرَّح أقلّ من حدّ الوقود" if rel[i] < -tol else ""})
+                         "reason": "Beyan edilen CO₂ yakıt tabanının altında" if rel[i] < -tol else ""})
 
-    # (ب) نِسَب الغازات إلى CO₂
+    # (b) gazların CO₂'ye oranları
     for g, band in params.get("ratios", {}).items():
         gcol = f"decl_{g}"
         if gcol not in d.columns or "decl_CO2" not in d.columns:
@@ -74,22 +74,22 @@ def check_physics(declarations: pd.DataFrame, params: dict, cfg: dict) -> pd.Dat
                          "rule": f"ratio_{g}_to_CO2", "gas": g,
                          "value": ratio[i], "expected": low,
                          "flag": flagged,
-                         "reason": f"نسبة {g}/CO₂ أقلّ من الحدّ" if flagged else ""})
+                         "reason": f"{g}/CO₂ oranı alt sınırın altında" if flagged else ""})
 
-    # (ج) عدم السالبية
+    # (c) negatif olmama
     for g in [c[5:] for c in d.columns if c.startswith("decl_") and c != "decl_heat_input"]:
         vals = d[f"decl_{g}"].to_numpy()
         for i in range(len(d)):
             if vals[i] < 0:
                 rows.append({"facility": d["facility"][i], "unit": d["unit"][i], "ym": d["ym"][i],
                              "rule": "nonneg", "gas": g, "value": vals[i], "expected": 0.0,
-                             "flag": True, "reason": "قيمة سالبة"})
+                             "flag": True, "reason": "Negatif değer"})
 
     return pd.DataFrame(rows)
 
 
 def rollup_physics(physics_long: pd.DataFrame) -> pd.DataFrame:
-    """طيّ نتائج الفحص الفيزيائي إلى مستوى السجل: مشبوه لو أي قاعدة عُلِّمت."""
+    """Fiziksel kontrol sonuçlarını kayıt düzeyine indirger: herhangi bir kural işaretlendiyse şüpheli."""
     def _agg(sub: pd.DataFrame) -> pd.Series:
         fired = sub.loc[sub["flag"], "rule"].tolist()
         return pd.Series({"physics_flag": bool(len(fired) > 0),

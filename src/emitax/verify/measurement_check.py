@@ -3,8 +3,8 @@ import numpy as np
 import pandas as pd
 
 # =========================================================
-#  الفحص الرئيسي (١): مقارنة البيان بالقياس
-#  gap = المُصرَّح − المقيس ؛ فجوة سالبة تتجاوز التسامح = تخفيض مشبوه
+#  Ana kontrol (1): beyanın ölçümle karşılaştırılması
+#  gap = beyan − ölçülen ; toleransı aşan negatif fark = şüpheli azaltma
 # =========================================================
 
 def _measured_wide(measurement: pd.DataFrame, gases: list[str]) -> pd.DataFrame:
@@ -13,10 +13,10 @@ def _measured_wide(measurement: pd.DataFrame, gases: list[str]) -> pd.DataFrame:
 
 
 def run_check(declarations: pd.DataFrame, measurement: pd.DataFrame, cfg: dict) -> pd.DataFrame:
-    """يقارن كل بيان بالقياس المقابل ويُرجع جدولاً طويلاً (صف لكل غاز):
+    """Her beyanı ilgili ölçümle karşılaştırır ve uzun tablo döndürür (her gaz için bir satır):
 
     facility, unit, ym, gas, measured, declared, gap, rel_gap, flag
-    flag=True عندما rel_gap < -tolerance (صرّح أقلّ من المقيس بفارق معتدّ به). دالة pure.
+    flag=True olur, rel_gap < -tolerance olduğunda (ölçülenden belirgin şekilde az beyan). pure fonksiyon.
     """
     gases = [g for g in cfg["columns"]["gases"] if f"{g}_mass" in measurement.columns]
     tol = cfg.get("check", {}).get("rel_tolerance", 0.05)
@@ -42,9 +42,9 @@ def run_check(declarations: pd.DataFrame, measurement: pd.DataFrame, cfg: dict) 
 
 
 def rollup_records(check_long: pd.DataFrame) -> pd.DataFrame:
-    """طيّ نتائج الغازات إلى مستوى السجل: السجل مشبوه لو أي غاز مُعلَّم.
+    """Gaz sonuçlarını kayıt düzeyine indirger: herhangi bir gaz işaretliyse kayıt şüpheli.
 
-    يُرجع facility, unit, ym, record_flag, flagged_gases, worst_rel_gap.
+    Döndürür: facility, unit, ym, record_flag, flagged_gases, worst_rel_gap.
     """
     def _agg(sub: pd.DataFrame) -> pd.Series:
         flagged = sub.loc[sub["flag"], "gas"].tolist()

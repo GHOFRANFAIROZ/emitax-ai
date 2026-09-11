@@ -55,4 +55,4 @@ def test_reason_is_not_black_box():
     rollups = {"peer": pd.DataFrame({"facility": ["A"], "unit": ["U1"], "ym": ["2025-01"],
                                      "peer_flag": [True], "flagged_gases": ["SO2"]})}
     out = decide(rollups, base, CFG).set_index("ym")
-    assert "القطاع" in out.loc["2025-01", "reason"]      # سبب مقروء موجود
+    assert "Sektör" in out.loc["2025-01", "reason"]      # okunabilir gerekçe mevcut

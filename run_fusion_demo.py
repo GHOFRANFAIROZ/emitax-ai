@@ -1,10 +1,10 @@
 """
-المرحلة ٧ — العرض الختامي: الفحوص الأربعة مدموجة في درجة ثقة وقرار.
+Aşama 7 — Kapanış gösterimi: dört kontrol, tek bir güven skoru ve kararda birleştirilir.
 
     python run_fusion_demo.py
 
-يشغّل الفحوص الأربعة على البيان المُلاعَب، يدمجها في درجة ثقة ٠–١٠٠،
-ويطبع: مقاييس النظام المدموج، توزيع القرارات الثلاثة، وعيّنة سجلّات بأسبابها.
+Dört kontrolü manipüle edilmiş beyan üzerinde çalıştırır, 0–100 güven skorunda birleştirir,
+ve yazar: birleşik sistem metrikleri, üç kararın dağılımı ve gerekçeleriyle örnek kayıtlar.
 """
 from __future__ import annotations
 import sys
@@ -27,14 +27,14 @@ def main() -> None:
     cfg = load_config("configs/default.yaml")
     mpath = Path(cfg["data"]["processed_dir"]) / "monthly_measurement.csv"
     if not mpath.exists():
-        print("شغّلي run_prepare.py أولاً."); return
+        print("önce run_prepare.py çalıştırın."); return
     measurement = pd.read_csv(mpath)
     gases = gas_list(cfg, measurement)
 
     honest = generate_honest(measurement, cfg)
     mixed = make_labeled_set(honest, cfg, gases)
 
-    # الفحوص الأربعة
+    # dört kontrol
     rollups = {
         "measurement": rollup_records(run_check(mixed, measurement, cfg)),
         "physics":     rollup_physics(check_physics(mixed, fit_params(measurement, cfg), cfg)),
@@ -44,25 +44,28 @@ def main() -> None:
     decisions = decide(rollups, mixed, cfg)
     labeled = mixed.merge(decisions, on=["facility", "unit", "ym"], how="left")
 
-    # النظام المدموج: "مشبوه" = أي قرار غير الاعتماد الآلي
+    # Birleşik sistem: "şüpheli" = otomatik onay dışındaki her karar
     labeled["suspect"] = labeled["action"] != "approve"
     mm = detection_metrics(labeled["is_tampered"], labeled["suspect"])
-    print("[النظام المدموج (أي قرار ≠ اعتماد آلي = مشبوه)]")
+    print("[Birleşik sistem (onay dışı her karar = şüpheli)]")
     for k in ["recall", "fp_rate", "precision", "f1"]:
         print(f"   {k:10} = {mm[k]:.3f}")
     print(f"   TP={mm['TP']} FP={mm['FP']} FN={mm['FN']} TN={mm['TN']}\n")
 
-    print("[توزيع القرارات]")
+    print("[Karar dağılımı]")
     print(labeled.groupby(["is_tampered", "action"]).size().to_string(), "\n")
 
-    print("[عيّنة سجلّات: درجة الثقة والقرار والسبب]")
+    print("[Örnek kayıtlar: güven skoru, karar ve gerekçe]")
     cols = ["unit", "ym", "is_tampered", "trust_score", "action", "fired_checks", "reason"]
     print(labeled.sort_values("trust_score")[cols].head(10).to_string(index=False))
 
     outdir = Path(cfg["data"]["processed_dir"])
-    decisions.to_csv(outdir / "trust_decisions.csv", index=False)
-    print(f"\n[حفظ] {outdir/'trust_decisions.csv'}")
-    print("المرحلة ٧ تمّت. التالي: الربط بالبلوكتشين (م٨).")
+    # is_tampered dahil kaydet (analiz katmanı performans matrisi için)
+    save_cols = ["facility","unit","ym","trust_score","action","fired_checks","n_checks","reason","is_tampered"]
+    save_cols = [c for c in save_cols if c in labeled.columns]
+    labeled[save_cols].to_csv(outdir / "trust_decisions.csv", index=False)
+    print(f"\n[Kaydedildi] {outdir/'trust_decisions.csv'}")
+    print("Aşama 7 tamamlandı. Sonraki: blokzincire bağlama (K8).")
 
 
 if __name__ == "__main__":

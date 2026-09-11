@@ -3,17 +3,17 @@ import numpy as np
 import pandas as pd
 
 # =========================================================
-#  فحص الأقران القطاعي (٣): مقارنة كثافة الانبعاث المُصرَّحة
-#  بتوزيع القطاع (مصانع مماثلة). كثافة أقلّ بشكل شاذّ من القطاع = مشبوه.
-#  مرجع القطاع يأتي من داتا مرجعية [7] (هنا: من القياس عبر كل الوحدات).
-#  ميزته الفريدة: يمسك التخفيض المنتظم عبر كل أشهر الوحدة (اللي يفوت الفحص الزمني).
-#  محايد لعدد المصانع — كلّما زادوا، متن المرجع أكثر.
+#  Sektörel akran kontrolü (3): beyan edilen emisyon yoğunluğunun
+#  sektör dağılımıyla (benzer tesisler) karşılaştırılması. Sektörden anormal düşük yoğunluk = şüpheli.
+#  Sektör referansı bir referans veriden [7] gelir (burada: tüm birimlerdeki ölçümden).
+#  Benzersiz avantajı: birimin tüm aylarına yayılmış düzenli azaltmayı yakalar (zamansal kontrolün kaçırdığı).
+#  Tesis sayısından bağımsız — sayı arttıkça referans güçlenir.
 # =========================================================
 
 def build_peer_pool(reference: pd.DataFrame, cfg: dict) -> dict:
-    """يبني توزيع كثافة القطاع لكل غاز من داتا مرجعية (قياس عبر كل الوحدات).
+    """Her gaz için sektör yoğunluğu dağılımını referans veriden kurar (tüm birimlerdeki ölçüm).
 
-    كثافة = mass / heat_input. يُرجع لكل غاز: median + الحدّ الأدنى (مئين منخفض).
+    yoğunluk = mass / heat_input. Her gaz için döndürür: median + alt sınır (düşük yüzdelik).
     """
     gases = [g for g in cfg["columns"]["gases"] if f"{g}_mass" in reference.columns]
     lq = cfg.get("peer", {}).get("low_quantile", 0.05)
@@ -28,7 +28,7 @@ def build_peer_pool(reference: pd.DataFrame, cfg: dict) -> dict:
 
 
 def check_peer(declarations: pd.DataFrame, pool: dict, cfg: dict) -> pd.DataFrame:
-    """يقارن كثافة البيان بحدّ القطاع الأدنى. جدول طويل: gas, intensity, sector_low, flag, reason."""
+    """Beyan yoğunluğunu sektörün alt sınırıyla karşılaştırır. Uzun tablo: gas, intensity, sector_low, flag, reason."""
     if pool.get("n_units", 0) < cfg.get("peer", {}).get("min_peers", 2):
         return pd.DataFrame(columns=["facility", "unit", "ym", "gas", "rule", "flag"])
     if "decl_heat_input" not in declarations.columns:
@@ -49,12 +49,12 @@ def check_peer(declarations: pd.DataFrame, pool: dict, cfg: dict) -> pd.DataFram
                          "gas": g, "rule": "peer_low_intensity",
                          "intensity": inten[i], "sector_low": band["low"],
                          "flag": flagged,
-                         "reason": f"كثافة {g} أقلّ من القطاع" if flagged else ""})
+                         "reason": f"{g} yoğunluğu sektörün altında" if flagged else ""})
     return pd.DataFrame(rows)
 
 
 def rollup_peer(peer_long: pd.DataFrame) -> pd.DataFrame:
-    """طيّ إلى مستوى السجل: مشبوه لو أي غاز أقلّ من القطاع."""
+    """Kayıt düzeyine indirger: herhangi bir gaz sektörün altındaysa şüpheli."""
     if peer_long.empty:
         return pd.DataFrame(columns=["facility", "unit", "ym", "peer_flag", "flagged_gases"])
 

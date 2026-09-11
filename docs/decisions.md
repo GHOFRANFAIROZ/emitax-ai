@@ -1,6 +1,6 @@
-# قرارات المشروع (docs/decisions)
+# Proje kararları (docs/decisions)
 
-- الداتا: EPA CEMS — Limestone (تكساس)، وحدتا فحم LIM1/LIM2، ساعي، 2025.
-- CO2/HeatInput ≈ 0.105 ثابت (CV~0.07) → أساس فحص توازن الكربون.
-- البنية مدفوعة بالإعدادات + محايدة للأعمدة → مرونة الحجم.
-- التجميع الشهري = مرجع الفحص الرئيسي (البيان مقابل القياس).
+- Veri: EPA CEMS — Limestone (Teksas), iki kömür birimi LIM1/LIM2, saatlik, 2025.
+- CO2/HeatInput ≈ 0.105 sabit (CV~0.07) → karbon dengesi kontrolünün temeli.
+- Mimari ayar-güdümlü + sütun-bağımsız → boyut esnekliği.
+- Aylık toplulaştırma = ana kontrol referansı (beyan vs ölçüm).
